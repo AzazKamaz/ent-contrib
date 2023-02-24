@@ -100,7 +100,7 @@ func hasCollectedField(ctx context.Context, path ...string) bool {
 }
 
 const (
-	{{- range $field := list "edges" "node" "pageInfo" "totalCount" }}
+	{{- range $field := list "edges" "nodes" "node" "pageInfo" "totalCount" }}
 		{{ $field }}Field = "{{ $field }}"
 	{{- end }}
 )
@@ -136,6 +136,7 @@ type {{ $edge }} struct {
 {{ $conn := $names.Connection }}
 // {{ $conn }} is the connection containing edges to {{ $name }}.
 type {{ $conn }} struct {
+	Nodes []*{{ $name }} `json:"nodes"`
 	Edges []*{{ $edge }} `json:"edges"`
 	PageInfo PageInfo    `json:"pageInfo"`
 	TotalCount int       `json:"totalCount"`
@@ -165,9 +166,11 @@ func (c *{{ $conn }}) build(nodes []*{{ $name }}, pager *{{ $pager }}, after *Cu
 			return nodes[i]
 		}
 	}
+	c.Nodes = make([]*{{ $name }}, len(nodes))
 	c.Edges = make([]*{{ $edge }}, len(nodes))
 	for i := range nodes {
 		node := nodeAt(i)
+		c.Nodes[i] = node
 		c.Edges[i] = &{{ $edge }}{
 			Node: node,
 			Cursor: pager.toCursor(node),
@@ -512,9 +515,10 @@ func ({{ $r }} *{{ $name }}) ToEdge(order *{{ $order }}) *{{ $edge }} {
 	{{- /* Ensure the "edges" field is marshaled as "[]" in case it is empty. */}}
 	conn := &{{ $conn }}{Edges: []*{{ $edge }}{}}
 	ignoredEdges := !hasCollectedField(ctx, edgesField)
+	ignoredNodes := !hasCollectedField(ctx, nodesField)
 	if hasCollectedField(ctx, totalCountField) || hasCollectedField(ctx, pageInfoField) {
 		hasPagination := after != nil || first != nil || before != nil || last != nil
-		if hasPagination || ignoredEdges {
+		if hasPagination || (ignoredEdges && ignoredNodes) {
 			if conn.TotalCount, err = {{ $r }}.Clone().Count(ctx); err != nil {
 				return nil, err
 			}
@@ -523,7 +527,7 @@ func ({{ $r }} *{{ $name }}) ToEdge(order *{{ $order }}) *{{ $edge }} {
 		}
 		{{- /* TotalCount will be settled by conn.build() */}}
 	}
-	if ignoredEdges || (first != nil && *first == 0) || (last != nil && *last == 0) {
+	if (ignoredEdges && ignoredNodes) || (first != nil && *first == 0) || (last != nil && *last == 0) {
 		return conn, nil
 	}
 
@@ -536,6 +540,11 @@ func ({{ $r }} *{{ $name }}) ToEdge(order *{{ $order }}) *{{ $edge }} {
 	}
 	if field := collectedField(ctx, edgesField, nodeField); field != nil {
 		if err := {{ $r }}.collectField(ctx, graphql.GetOperationContext(ctx), *field, []string{edgesField, nodeField}); err != nil {
+			return nil, err
+		}
+	}
+	if field := collectedField(ctx, nodesField); field != nil {
+		if err := {{ $r }}.collectField(ctx, graphql.GetOperationContext(ctx), *field, []string{nodesField}); err != nil {
 			return nil, err
 		}
 	}

@@ -481,6 +481,11 @@ func (p *PaginationNames) TypeDefs() []*ast.Definition {
 			Description: "A connection to a list of items.",
 			Fields: []*ast.FieldDefinition{
 				{
+					Name:        "nodes",
+					Type:        ast.ListType(ast.NamedType(p.Node, nil), nil),
+					Description: "A list of nodes.",
+				},
+				{
 					Name:        "edges",
 					Type:        ast.ListType(ast.NamedType(p.Edge, nil), nil),
 					Description: "A list of edges.",
