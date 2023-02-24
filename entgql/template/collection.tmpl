@@ -82,10 +82,11 @@ func ({{ $receiver }} *{{ $query }}) collectField(ctx context.Context, oneNode b
 								return err
 							}
 							ignoredEdges := !hasCollectedField(ctx, append(path, edgesField)...)
+							ignoredNodes := !hasCollectedField(ctx, append(path, nodesField)...)
 							if hasCollectedField(ctx, append(path, totalCountField)...) || hasCollectedField(ctx, append(path, pageInfoField)...) {
 								{{- /* Only add loadTotal query when needs */}}
 								hasPagination := args.after != nil || args.first != nil || args.before != nil || args.last != nil
-								if hasPagination || ignoredEdges {
+								if hasPagination || (ignoredEdges && ignoredNodes) {
 									{{- with extend $node "Edge" $e "Index" $i "Receiver" $receiver }}
 										{{- template "gql_pagination/helper/load_total" . }}
 									{{- end -}}
@@ -103,7 +104,7 @@ func ({{ $receiver }} *{{ $query }}) collectField(ctx context.Context, oneNode b
 									})
 								}
 							}
-							if ignoredEdges || (args.first != nil && *args.first == 0) || (args.last != nil && *args.last == 0) {
+							if (ignoredEdges && ignoredNodes) || (args.first != nil && *args.first == 0) || (args.last != nil && *args.last == 0) {
 								{{- /* Skip querying edges if "edges" "node" was not required. */}}
 								continue
 							}
