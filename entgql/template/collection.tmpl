@@ -111,10 +111,20 @@ func ({{ $receiver }} *{{ $query }}) collectField(ctx context.Context, oneNode b
 							if query, err = pager.applyCursors(query, args.after, args.before); err != nil {
 								return err
 							}
-							path = append(path, edgesField, nodeField)
-							if field := collectedField(ctx, path...); field != nil {
-								if err := query.collectField(ctx, {{ $oneNode }}, opCtx, *field, path, mayAddCondition(satisfies, {{ nodeImplementorsVar $e.Type }})...); err != nil {
-									return err
+							{
+								path := append(path, edgesField, nodeField)
+								if field := collectedField(ctx, path...); field != nil {
+									if err := query.collectField(ctx, {{ $oneNode }}, opCtx, *field, path, mayAddCondition(satisfies, {{ nodeImplementorsVar $e.Type }})...); err != nil {
+										return err
+									}
+								}
+							}
+							{
+								path := append(path, nodesField)
+								if field := collectedField(ctx, path...); field != nil {
+									if err := query.collectField(ctx, {{ $oneNode }}, opCtx, *field, path, mayAddCondition(satisfies, {{ nodeImplementorsVar $e.Type }})...); err != nil {
+										return err
+									}
 								}
 							}
 							if limit := paginateLimit(args.first, args.last); limit > 0 {
