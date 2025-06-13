@@ -109,10 +109,20 @@ func ({{ $receiver }} *{{ $query }}) collectField(ctx context.Context, opCtx *gr
 							} else {
 								query = pager.applyOrder(query)
 							}
-							path = append(path, edgesField, nodeField)
-							if field := collectedField(ctx, path...); field != nil {
-								if err := query.collectField(ctx, opCtx, *field, path, satisfies...); err != nil {
-									return err
+							{
+								path := append(path, edgesField, nodeField)
+								if field := collectedField(ctx, path...); field != nil {
+									if err := query.collectField(ctx, opCtx, *field, path, satisfies...); err != nil {
+										return err
+									}
+								}
+							}
+							{
+								path := append(path, nodesField)
+								if field := collectedField(ctx, path...); field != nil {
+									if err := query.collectField(ctx, opCtx, *field, path, satisfies...); err != nil {
+										return err
+									}
 								}
 							}
 						{{- else }}
